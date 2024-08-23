@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gmaps-image"
+dynamic = ["version"]
+description = 'Retrieving arbitrary sized Google Maps images at the zoom level and scale of choice.'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "jvtubergen", email = "jvtubergen@pm.me" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "pillow", # Storing and retrieving images to and from the cache.
+    "numpy",  # Image data manipulation.
+]
+
+[project.urls]
+Documentation = "https://github.com/jvtubergen/gmaps-image#readme"
+Issues = "https://github.com/jvtubergen/gmaps-image/issues"
+Source = "https://github.com/jvtubergen/gmaps-image"
+
+[tool.hatch.version]
+path = "src/gmaps_image/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/gmaps_image tests}"
+
+[tool.coverage.run]
+source_pkgs = ["gmaps_image", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/gmaps_image/__about__.py",
+]
+
+[tool.coverage.paths]
+gmaps_image = ["src/gmaps_image", "*/gmaps-image/src/gmaps_image"]
+tests = ["tests", "*/gmaps-image/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
