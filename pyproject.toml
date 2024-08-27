@@ -27,6 +27,7 @@ classifiers = [
 dependencies = [
     "pillow", # Storing and retrieving images to and from the cache.
     "numpy",  # Image data manipulation.
+    "requests", # Downloading images with API requests.
 ]
 
 [project.urls]

@@ -3,7 +3,8 @@ from PIL import Image
 import numpy as np
 import math
 import os
-import subprocess
+import requests
+
 
 cos  = math.cos
 sec  = lambda phi: 1/cos(phi) # Secant
@@ -66,17 +67,46 @@ def cut_logo(image, scale, margin):
 
 
 # Build filename and url for image.
-def build_url(lat, lon, zoom, resolution, scale, api_key):
+def build_filename_and_url(lat, lon, zoom, resolution, scale, api_key):
     filename = "image_lat=%.6f_lon=%.6f_zoom=%d_scale=%d_size=%d.png" % (lat, lon, zoom, scale, resolution)
     url = "https://maps.googleapis.com/maps/api/staticmap?center="+("%.6f" % lat)+","+("%.6f" % lon)+"&zoom="+str(int(zoom))+"&scale="+str(int(scale))+"&size="+str(int(resolution))+"x"+str(int(resolution))+"&maptype=satellite&style=element:labels|visibility:off&key=" + api_key
     return filename, url
 
 
+def fetch_image(lat, lon, zoom, resolution, scale, api_key):
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        # response.status_code
+    except HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except Exception as err:
+        print(f"Other error occurred: {err}")
+    else:
+        print("Success!")
+    
+    type(response.content) # <class 'bytes'>
+    response.encoding # 
+    # somehow interpret as png..?
+
+    return response.content
+    
+
 # Fetch url and store under fname.
-def fetch_url(fname, url):
-    if 0 == subprocess.Popen("timeout 5s wget -O tmp.png \"" + url + "\"", shell = True).wait():
-        return 0 == subprocess.Popen("mv tmp.png " + fname, shell=True).wait()
-    return False
+def fetch_url(fname, url, *params): # params is a list of [("query", "value")] pairs
+    try:
+        response = requests.get(url, params, timeout=5)
+        response.raise_for_status()
+
+        with open(fname, 'wb') as file:
+            file.write(response.content)
+
+        return True
+
+    except Exception as e:
+        print(e)
+
+        return False
 
 
 # Uniform web mercator projection
@@ -95,23 +125,20 @@ def webmercator_uniform_to_latlon(y, x):
 # Conversion between latlon and world/tile/pixelcoordinates.
 # Tile and pixel coordinates depends on zoom level.
 # In general, the uniform webmercator y,x values are scaled.
+def pixelcoord_to_latlon(y, x, zoom):
+    pixelcount = int(256 * pow(2, zoom))
+    return webmercator_uniform_to_latlon(y / pixelcount, x / pixelcount)
 def latlon_to_pixelcoord(lat, lon, zoom):
     y, x = latlon_to_webmercator_uniform(lat, lon)
     pixelcount = int(256 * pow(2, zoom))
     return int(y * pixelcount), int(x * pixelcount)
-
 def latlon_to_tilecoord(lat, lon, zoom):
     y, x = latlon_to_webmercator_uniform(lat, lon)
     tilecount = int(pow(2, zoom))
     return int(y * tilecount), int(x * tilecount)
-
 def latlon_to_worldcoord(lat, lon):
     y, x = latlon_to_webmercator_uniform(lat, lon)
     return y * 256, x * 256
-
-def pixelcoord_to_latlon(y, x, zoom):
-    pixelcount = int(256 * pow(2, zoom))
-    return webmercator_uniform_to_latlon(y / pixelcount, x / pixelcount)
 
 
 # GSD (Ground Sampling Distance): spatial resolution (in meters) of the image.
@@ -211,7 +238,7 @@ def construct_image(p1, p2, zoom, scale, api_key, full_tiles=False, square=True)
     off2 = (step - ((y2 + 1) % step) - 1, step - ((x2 + 1) % step) - 1)
 
     # Construct and fetch urls.
-    urls = [build_url(lat, lon, zoom, max_resolution, scale, api_key) for (lat, lon) in latloncoords]
+    urls = [build_filename_and_url(lat, lon, zoom, max_resolution, scale, api_key) for (lat, lon) in latloncoords]
     for (fname, url) in urls:
         if not os.path.isfile(cache_folder + fname):
             assert fetch_url(cache_folder + fname, url)
