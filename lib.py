@@ -201,11 +201,19 @@ def squarify_web_mercator_coordinates(p1, p2, zoom):
 # Retrieve images, stitch them together.
 # * Adjust to have tile consistency, this should reduce the number of requests we are making.
 # * Prefer higher scale, lowers image retrieval count as well.
-def construct_image(p1, p2, zoom, scale, api_key, full_tiles=False, square=True):
+def construct_image(north=None, west=None, east=None, south=None, zoom=None, scale=None, api_key=None, full_tiles=False, square=False):
+    
+    assert north   != None
+    assert west    != None
+    assert east    != None
+    assert south   != None
+    assert zoom    != None
+    assert scale   != None
+    assert api_key != None
 
     # Deconstruct latlons.
-    lat1, lon1 = p1 # Upper-left  corner (thus higher latitude and lower longitude).
-    lat2, lon2 = p2 # Lower-right corner (thus lower latitude and higher longitude).
+    lat1, lon1 = north, west # Upper-left  corner (thus higher latitude and lower longitude).
+    lat2, lon2 = south, east # Lower-right corner (thus lower latitude and higher longitude).
 
     # Obtain pixel range in google maps at given zoom.
     y1, x1 = latlon_to_pixelcoord(lat1, lon1, zoom)
