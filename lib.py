@@ -159,17 +159,17 @@ def derive_zoom(lat, scale, goal_gsd, deviation=0.0):
     # w / (256 * gsd * k * scale) = pow(2, zoom)
     zoom = log(w / (256 * goal_gsd * k * scale), 2)
 
-    zoom2 = ceil(zoom)
     zoom1 = floor(zoom)
+    zoom2 = ceil(zoom)
 
-    gsd2 = compute_gsd(lat, zoom2, scale) 
     gsd1 = compute_gsd(lat, zoom1, scale) 
+    gsd2 = compute_gsd(lat, zoom2, scale) 
 
-    if gsd2 <= goal_gsd + deviation:
-        return gsd2
+    if gsd1 <= goal_gsd + deviation:
+        return zoom1
     else:
-        assert gsd1 <= goal_gsd + deviation
-        return gsd1 
+        assert gsd2 <= goal_gsd + deviation
+        return zoom2
 
 
 # Adapt coordinates into a square.
