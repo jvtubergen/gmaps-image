@@ -148,6 +148,30 @@ def compute_gsd(lat, zoom, scale):
     return w / (256 * pow(2, zoom) * k * scale)
 
 
+# Compute zoom in such that related GSD is smaller or equal to the goal GSD.
+def derive_zoom(lat, scale, goal_gsd, deviation=0.0):
+
+    k = sec(deg_to_rad(lat)) # Scale factor by mercator projection.
+    w = earth_circumference  # Total image distance on 256x256 world image
+    # gsd = w / (256 * pow(2, zoom) * k * scale)
+    # w / gsd = 256 * pow(2, zoom) * k * scale
+    # w / (256 * gsd) = pow(2, zoom) * k * scale
+    # w / (256 * gsd * k * scale) = pow(2, zoom)
+    zoom = log(w / (256 * goal_gsd * k * scale), 2)
+
+    zoom2 = ceil(zoom)
+    zoom1 = floor(zoom)
+
+    gsd2 = gmaps.compute_gsd(lat_reference, zoom2, scale) 
+    gsd1 = gmaps.compute_gsd(lat_reference, zoom1, scale) 
+
+    if gsd2 <= goal_gsd + deviation:
+        return gsd2
+    else:
+        assert gsd1 <= goal_gsd + deviation
+        return gsd1 
+
+
 # Adapt coordinates into a square.
 # * Assumes uniform horizonal and vertical distance (thus don't apply to mercurator coordinates).
 # * Assume to be inclusive (thus increasing area size rather than lowering it).
