@@ -225,7 +225,7 @@ def squarify_web_mercator_coordinates(p1, p2, zoom):
 # Retrieve images, stitch them together.
 # * Adjust to have tile consistency, this should reduce the number of requests we are making.
 # * Prefer higher scale, lowers image retrieval count as well.
-def construct_image(north=None, west=None, east=None, south=None, zoom=None, scale=None, api_key=None, full_tiles=False, square=False):
+def construct_image(north=None, west=None, east=None, south=None, zoom=None, scale=None, api_key=None, full_tiles=False, square=False, verbose=False):
     
     assert north   != None
     assert west    != None
@@ -270,12 +270,20 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
     off2 = (step - ((y2 + 1) % step) - 1, step - ((x2 + 1) % step) - 1)
 
     # Construct and fetch urls.
+    if verbose:
+        print("Retrieving images.")
     urls = [build_filename_and_url(lat, lon, zoom, max_resolution, scale, api_key) for (lat, lon) in latloncoords]
+    count = 0
     for (fname, url) in urls:
+        if verbose:
+            print(f"{count+1}/{len(urls)}")
+        count += 1
         if not os.path.isfile(cache_folder + fname):
             assert fetch_url(cache_folder + fname, url)
     
     # Load images into program workmemory.
+    if verbose:
+        print("Constructing image.")
     images = [read_image(cache_folder + fname) for (fname, _) in urls]
     images = [cut_logo(image, scale, margin) for image in images]
 
@@ -296,6 +304,8 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
         # Note how we cut off in y with first axis (namely rows) and x in second axis (columns).
     
     # Store along coordinates of extracted image per pixel.
+    if verbose:
+        print("Constructing pixel coordinates.")
     pixelcoordinates = []
     for y in range(y1,y2):
         tmp = []
