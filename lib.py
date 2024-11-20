@@ -221,7 +221,7 @@ def squarify_web_mercator_coordinates(p1, p2, zoom):
 
     return p1, p2
 
-
+    
 # Retrieve images, stitch them together.
 # * Adjust to have tile consistency, this should reduce the number of requests we are making.
 # * Prefer higher scale, lowers image retrieval count as well.
@@ -255,7 +255,7 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
     step = max_resolution - 2*margin # Tile step size.
     t1 = (y1 // step, x1 // step) # Tile in which upper-left  pixel lives.
     t2 = (y2 // step, x2 // step) # Tile in which lower-right pixel lives.
-    tiles = [(j, i) for j in range(t1[0],t2[0] + 1) for i in range(t1[1],t2[1] + 1)]
+    tiles  = [(j, i) for j in range(t1[0], t2[0] + 1) for i in range(t1[1], t2[1] + 1)]
     width  = len(range(t1[1],t2[1] + 1)) # Tile width.
     height = len(range(t1[0],t2[0] + 1)) # Tile height.
 
@@ -321,3 +321,40 @@ def read_api_key():
     with open(cache_folder + "api_key.txt") as f: 
         api_key = f.read()
     return api_key
+
+
+# Simplified logic which acts on pixel coordinates `({"x", "y"}, {"x", "y"})` or latlon coordinates `({"lat", "lon"}, {"lat", "lon"})`.
+def get_image(scale=None, zoom=None, pixel_coordinates=None, latlon_coordinates=None):
+
+    assert zoom    != None
+    assert scale   != None
+
+    north = None
+    west  = None
+    east  = None
+    south = None
+
+    if pixel_coordinates != None:
+        xa, xb = pixel_coordinates[0]['x'], pixel_coordinates[1]['x']
+        ya, yb = pixel_coordinates[0]['y'], pixel_coordinates[1]['y']
+        x0, x1 = min(xa, xb), max(xa, xb)
+        y0, y1 = min(ya, yb), max(ya, yb)
+        north, west = pixelcoord_to_latlon(y0, x0, zoom)
+        south, east = pixelcoord_to_latlon(y1, x1, zoom)
+
+    elif latlon_coordinates != None:
+        lona, lonb = pixel_coordinates[0]['lon'], pixel_coordinates[1]['lon']
+        lata, latb = pixel_coordinates[0]['lat'], pixel_coordinates[1]['lat']
+        south, north = min(lata, latb), max(lata, latb)
+        west, east   = min(lona, lonb), max(lona, lonb)
+    
+    else:
+        raise Exception("Either provide pixel coordinates or latlon coordinates.")
+
+    assert north   != None
+    assert west    != None
+    assert east    != None
+    assert south   != None
+
+    api_key = read_api_key()
+    return construct_image(north=north, east=east, south=south, west=west, zoom=zoom, scale=scale, api_key=api_key)
