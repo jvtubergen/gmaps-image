@@ -300,12 +300,7 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
     pixelcoords  = [(tile_to_pixel(j), tile_to_pixel(i)) for (j,i) in tiles]
     latloncoords = [pixelcoord_to_latlon(y, x, zoom) for y,x in pixelcoords]
 
-    # Pixel offset in upper-left  tile.
-    off1 = (y1 % step, x1 % step)
-    # Pixel offset in lower-right tile.
-    off2 = (step - ((y2 + 1) % step) - 1, step - ((x2 + 1) % step) - 1)
-
-    # Construct and fetch urls.
+    # Construct and fetch urls (switching to scaled coordinates from here on).
     if verbose:
         print("Retrieving images.")
     urls = [build_filename_and_url(lat, lon, zoom, max_resolution, scale, api_key) for (lat, lon) in latloncoords]
@@ -315,39 +310,80 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
             print(f"{count+1}/{len(urls)}")
         count += 1
         if not os.path.isfile(cache_folder + fname):
+            if verbose:
+                print("Fetching image from " + url)
             assert fetch_url(cache_folder + fname, url)
     
-    # Load images into program workmemory.
+    # Stitch image tiles together.
     if verbose:
         print("Constructing image.")
     images = [read_image(cache_folder + fname) for (fname, _) in urls]
     images = [cut_logo(image, scale, margin) for image in images]
 
-    imagecount = int(math.sqrt(len(tiles)))
-    size = scale * (max_resolution - 2*margin)
+    size = scale * step # Image size.
     superimage = np.ndarray((height*size, width*size, 3), dtype="uint8")
-
     m = size
-    for i in range(height):
-        for j in range(width):
-            superimage[i*m:(i+1)*m,j*m:(j+1)*m,:] = images[i*width+j]
+    for y in range(height):
+        for x in range(width):
+            superimage[y*m:(y+1)*m,x*m:(x+1)*m,:] = images[y*width+x]
     
+    # Cut out part of interest (of latlon).
     if not full_tiles:
-        # Cut out part of interest (of latlon).
-        off1 = (off1[0] * scale, off1[1] * scale) # Apply scale to (y,x) offset.
-        off2 = (off2[0] * scale, off2[1] * scale) # Apply scale to (y,x) offset.
-        superimage = superimage[off1[0]:-off2[0],off1[1]:-off2[1],:]
-        # Note how we cut off in y with first axis (namely rows) and x in second axis (columns).
+
+        def subtest():
+            # Sanity check offset applied to lower-right tile is correct.
+            def formula(y2, step):
+                return step - (y2 % step) - 1
+
+            step = 88
+
+            y2 = 4 * step 
+            off2 = formula(y2, step)
+            assert off2 == step - 1
+
+            y2 = 4 * step - 1
+            off2 = formula(y2, step)
+            assert off2 == 0 
+
+        off1 = scale * np.array((y1 % step, x1 % step)) # Pixel offset in upper-left tile.
+        off2 = scale * np.array((step - (y2 % step) - 1, step - (x2 % step) - 1)) # Pixel offset in lower-right tile.
+        superimage = superimage[off1[0]:-off2[0],off1[1]:-off2[1],:] # Note how we cut off in y with first axis (namely rows) and x in second axis (columns).
+
+        ty, tx = tiles[0]
+
+        print(y1, ty * step + off1[0] // 2)
+        print(x1, tx * step + off1[1] // 2)
+
+        assert(y1 == ty * step + off1[0] // 2)
+        assert(x1 == tx * step + off1[1] // 2)
+
+        ty, tx = tiles[-1]
+        ty += 1
+        tx += 1
+
+        print(y2, ty * step - off2[0] // 2 - 1)
+        print(x2, tx * step - off2[1] // 2 - 1)
+
+        assert(y2 == ty * step - off2[0] // 2 - 1)
+        assert(x2 == tx * step - off2[1] // 2 - 1)
     
     # Store along coordinates of extracted image per pixel.
     if verbose:
         print("Constructing pixel coordinates.")
-    pixelcoordinates = []
-    for y in range(y1,y2):
-        tmp = []
-        for x in range(x1,x2):
-            tmp.append(pixelcoord_to_latlon(y, x, zoom))
-        pixelcoordinates.append(tmp)
+    pixelcoordinates = np.ndarray((superimage.shape[0], superimage.shape[1], 2))
+
+    # Final checks.
+    print(superimage.shape)
+    print(pixelcoordinates.shape)
+    print(y2 - y1 + 1, x2 - x1 + 1)
+    assert(superimage.shape[0] == pixelcoordinates.shape[0])
+    assert(superimage.shape[1] == pixelcoordinates.shape[1])
+    # assert(superimage.shape[0] == 2 * (y2 - y1 + 1))
+    # assert(superimage.shape[1] == 2 * (x2 - x1 + 1))
+
+    for y in range(scale * (y2 - y1 + 1)):
+        for x in range(scale * (x2 - x1 + 1)):
+            pixelcoordinates[y, x] = np.array(pixelcoord_to_latlon_secure(scale * y1 + y, scale * x1 + x, zoom + (scale == 2)))
 
     return superimage, pixelcoordinates
 
