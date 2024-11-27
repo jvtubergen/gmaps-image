@@ -140,6 +140,38 @@ def latlon_to_worldcoord(lat, lon):
     y, x = latlon_to_webmercator_uniform(lat, lon)
     return y * 256, x * 256
 
+# Number imprecision by conversion math can cause minor deviations.
+# Solve this by iteratively tweaking till inverse is identical.
+# Thus adjust as necessary to prevent overlap with adjacent pixels.
+def pixelcoord_to_latlon_secure(y, x, zoom):
+    # Check above and below, and adjust as necessary to prevent overlap with adjacent pixels.
+    lat, lon = pixelcoord_to_latlon(y, x, zoom)
+    y2 , x2  = latlon_to_pixelcoord(lat, lon, zoom)
+
+    while y2 != y:
+        # print("Fixing latitude")
+        # print("Goal:", y)
+        # print("Curr:", y2)
+        assert(abs(y2 - y) == 1)
+        if y2 < y:
+            lat -= 0.000001
+        else:
+            lat += 0.000001
+        y2 , x2  = latlon_to_pixelcoord(lat, lon, zoom)
+
+    while x2 != x:
+        # print("Fixing longitude")
+        # print("Goal:", x)
+        # print("Curr:", x2)
+        assert(abs(x2 - x) == 1)
+        if x2 < x:
+            lon += 0.000001
+        else:
+            lon -= 0.000001
+        y2 , x2  = latlon_to_pixelcoord(lat, lon, zoom)
+    
+    return lat, lon
+
 
 # GSD (Ground Sampling Distance): spatial resolution (in meters) of the image.
 def compute_gsd(lat, zoom, scale):
