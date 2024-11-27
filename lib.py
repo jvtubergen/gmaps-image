@@ -193,11 +193,15 @@ def derive_zoom(lat, scale, goal_gsd, deviation=0.0):
 
     zoom1 = floor(zoom)
     zoom2 = ceil(zoom)
+    zoom0 = zoom1 - 1
 
+    gsd0 = compute_gsd(lat, zoom0, scale) 
     gsd1 = compute_gsd(lat, zoom1, scale) 
     gsd2 = compute_gsd(lat, zoom2, scale) 
 
-    if gsd1 <= goal_gsd + deviation:
+    if gsd0 <= goal_gsd + deviation:
+        return zoom0
+    elif gsd1 <= goal_gsd + deviation:
         return zoom1
     else:
         assert gsd2 <= goal_gsd + deviation
