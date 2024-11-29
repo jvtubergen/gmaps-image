@@ -346,31 +346,36 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
             assert off2 == 0 
 
         off1 = scale * np.array((y1 % step, x1 % step)) # Pixel offset in upper-left tile.
-        off2 = scale * np.array((step - (y2 % step) - 1, step - (x2 % step) - 1)) # Pixel offset in lower-right tile.
+        off2 = scale * np.array((step - (y2 % step), step - (x2 % step))) # Pixel offset in lower-right tile.
         superimage = superimage[off1[0]:-off2[0],off1[1]:-off2[1],:] # Note how we cut off in y with first axis (namely rows) and x in second axis (columns).
 
-        ty, tx = tiles[0]
+        # ty, tx = tiles[0]
 
-        print(y1, ty * step + off1[0] // 2)
-        print(x1, tx * step + off1[1] // 2)
+        # print(y1, ty * step + off1[0] // 2)
+        # print(x1, tx * step + off1[1] // 2)
 
-        assert(y1 == ty * step + off1[0] // 2)
-        assert(x1 == tx * step + off1[1] // 2)
+        # assert(y1 == ty * step + off1[0] // 2)
+        # assert(x1 == tx * step + off1[1] // 2)
 
-        ty, tx = tiles[-1]
-        ty += 1
-        tx += 1
+        # ty, tx = tiles[-1]
+        # ty += 1
+        # tx += 1
 
-        print(y2, ty * step - off2[0] // 2 - 1)
-        print(x2, tx * step - off2[1] // 2 - 1)
+        # print(y2, ty * step - off2[0] // 2 - 1)
+        # print(x2, tx * step - off2[1] // 2 - 1)
 
-        assert(y2 == ty * step - off2[0] // 2 - 1)
-        assert(x2 == tx * step - off2[1] // 2 - 1)
+        # assert(y2 == ty * step - off2[0] // 2 - 1)
+        # assert(x2 == tx * step - off2[1] // 2 - 1)
     
     # Store along coordinates of extracted image per pixel.
     if verbose:
         print("Constructing pixel coordinates.")
     pixelcoordinates = np.ndarray((superimage.shape[0], superimage.shape[1], 2))
+
+    print(superimage.shape[0] % 88)
+    print(superimage.shape[1] % 88)
+    assert(superimage.shape[0] % 88 == 0)
+    assert(superimage.shape[1] % 88 == 0)
 
     # Final checks.
     print(superimage.shape)
@@ -381,8 +386,8 @@ def construct_image(north=None, west=None, east=None, south=None, zoom=None, sca
     # assert(superimage.shape[0] == 2 * (y2 - y1 + 1))
     # assert(superimage.shape[1] == 2 * (x2 - x1 + 1))
 
-    for y in range(scale * (y2 - y1 + 1)):
-        for x in range(scale * (x2 - x1 + 1)):
+    for y in range(scale * (y2 - y1)):
+        for x in range(scale * (x2 - x1)):
             pixelcoordinates[y, x] = np.array(pixelcoord_to_latlon_secure(scale * y1 + y, scale * x1 + x, zoom + (scale == 2)))
 
     return superimage, pixelcoordinates
